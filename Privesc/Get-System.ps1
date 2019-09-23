@@ -156,14 +156,23 @@ http://clymb3r.wordpress.com/2013/11/03/powershell-and-token-impersonation/
         $UnsafeNativeMethods = $SystemAssembly.GetType('Microsoft.Win32.UnsafeNativeMethods')
         # Get a reference to the GetModuleHandle and GetProcAddress methods
         $GetModuleHandle = $UnsafeNativeMethods.GetMethod('GetModuleHandle')
-        $GetProcAddress = $UnsafeNativeMethods.GetMethod('GetProcAddress')
+        $GetProcAddress = $UnsafeNativeMethods.GetMethods() | Where {$_.Name -eq "GetProcAddress"} | Select-Object -first 1
+
         # Get a handle to the module specified
         $Kern32Handle = $GetModuleHandle.Invoke($null, @($Module))
-        $tmpPtr = New-Object IntPtr
-        $HandleRef = New-Object System.Runtime.InteropServices.HandleRef($tmpPtr, $Kern32Handle)
 
         # Return the address of the function
-        Write-Output $GetProcAddress.Invoke($null, @([System.Runtime.InteropServices.HandleRef]$HandleRef, $Procedure))
+        try
+        {
+            $tmpPtr = New-Object IntPtr
+            $HandleRef = New-Object System.Runtime.InteropServices.HandleRef($tmpPtr, $Kern32Handle)
+            Write-Output $GetProcAddress.Invoke($null, @([System.Runtime.InteropServices.HandleRef]$HandleRef, $Procedure))
+        }
+        catch
+        {
+            # Windows 10 v1803 needs $Kern32Handle as a System.IntPtr instead of System.Runtime.InteropServices.HandleRef
+            Write-Output $GetProcAddress.Invoke($null, @($Kern32Handle, $Procedure))
+        }
     }
 
     # performs named pipe impersonation to elevate to SYSTEM without needing
