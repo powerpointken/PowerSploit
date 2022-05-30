@@ -4884,7 +4884,7 @@ detailing any discovered issues.
             Command = { Get-UnattendedInstallFile }
         },
         @{
-            Type    = 'Unattended Install Files'
+            Type    = 'Identify Passwords in Eventlog'
             Command = { Get-PasswordsFromPSEventlog }
         },
         @{
