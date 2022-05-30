@@ -3135,6 +3135,71 @@ https://www.mandiant.com/blog/malware-persistence-windows-registry/
     }
 }
 
+function Get-PasswordsFromPSEventlog
+    {
+<#
+.SYNOPSIS
+
+Finds password / secrets in PowerShell eventlog
+
+Author: Sebastian Hölzle (@powerpointken)
+License: BSD 3-Clause
+Required Dependencies: None
+
+.DESCRIPTION
+
+Evaluates the PowerShell eventlog for secrets and passwords.
+
+.EXAMPLE
+
+Get-PasswordsFromPSEventlog
+
+Finds passwords and secrets in PowerShell eventlog.
+
+.OUTPUTS
+
+PowerUp.Eventlog.Events
+
+.LINK
+
+
+#>
+    $PowerShellEventlog = Get-eventlog -LogName 'Windows PowerShell'
+
+    $Events = @()
+
+    if($PowerShellEventlog.message -match "Password")
+        {
+        $Events += ($PowerShellEventlog | where {$_.message -match "Password"})
+        }
+    if($PowerShellEventlog.message -match "SecureString")
+        {
+        $Events += ($PowerShellEventlog | where {$_.message -match "SecureString"})
+        }
+    if($PowerShellEventlog.message -match "DomainJoin")
+        {
+        $Events += ($PowerShellEventlog | where {$_.message -match "DomainJoin"})
+        }
+
+    if($events -ne $null)
+        {
+            Foreach($event in $Events)
+            {
+                $Out = New-Object PSObject
+                $Out | Add-Member Noteproperty 'Index' $Event.Index
+                $Out | Add-Member Noteproperty 'Time' $Event.TimeGenerated
+                $Out | Add-Member Noteproperty 'Source' $Event.Source
+                $Out | Add-Member Noteproperty 'Message' $Event.Message
+                $Out.PSObject.TypeNames.Insert(0, 'PowerUp.Eventlog.Events')
+                $Out
+            }
+        }
+
+
+    return $Events.Message
+
+    }
+
 
 function Find-PathDLLHijack {
 <#
@@ -4817,6 +4882,10 @@ detailing any discovered issues.
         @{
             Type    = 'Unattended Install Files'
             Command = { Get-UnattendedInstallFile }
+        },
+        @{
+            Type    = 'Unattended Install Files'
+            Command = { Get-PasswordsFromPSEventlog }
         },
         @{
             Type    = 'Encrypted web.config Strings'
